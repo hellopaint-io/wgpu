@@ -918,7 +918,11 @@ impl crate::DynPipelineLayout for PipelineLayout {}
 
 #[derive(Debug)]
 pub struct BindGroup {
-    set: descriptor::DescriptorSet,
+    /// `None` when the layout declares no descriptors at all. Such a group has
+    /// nothing to allocate and nothing to bind, and giving it no set keeps
+    /// zero-sized descriptor pools -- illegal before Vulkan 1.3.215 -- off the
+    /// table entirely.
+    set: Option<descriptor::DescriptorSet>,
 }
 
 impl crate::DynBindGroup for BindGroup {}

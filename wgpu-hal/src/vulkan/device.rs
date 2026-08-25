@@ -1652,6 +1652,15 @@ impl crate::Device for super::Device {
             super::AccelerationStructure,
         >,
     ) -> Result<super::BindGroup, crate::DeviceError> {
+        // A layout that declares no descriptors needs no set: there is nothing
+        // to allocate, write, or bind. Returning early also keeps the empty
+        // bucket from ever needing a pool, which could only be created with the
+        // `poolSizeCount == 0` that older drivers reject.
+        if desc.layout.desc_count.total() == 0 {
+            self.counters.bind_groups.add(1);
+            return Ok(super::BindGroup { set: None });
+        }
+
         let set = unsafe {
             self.desc_allocator
                 .lock()
@@ -1843,11 +1852,13 @@ impl crate::Device for super::Device {
 
         self.counters.bind_groups.add(1);
 
-        Ok(super::BindGroup { set })
+        Ok(super::BindGroup { set: Some(set) })
     }
 
     unsafe fn destroy_bind_group(&self, group: super::BindGroup) {
-        unsafe { self.desc_allocator.lock().free(&self.shared.raw, group.set) };
+        if let Some(set) = group.set {
+            unsafe { self.desc_allocator.lock().free(&self.shared.raw, set) };
+        }
 
         self.counters.bind_groups.sub(1);
     }

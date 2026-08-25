@@ -21,7 +21,7 @@ pub struct DescriptorCounts {
 }
 
 impl DescriptorCounts {
-    fn total(&self) -> u32 {
+    pub(super) fn total(&self) -> u32 {
         self.sampler
             + self.sampled_image
             + self.storage_image
@@ -120,9 +120,13 @@ impl DescriptorAllocator {
             hashbrown::hash_map::Entry::Occupied(occupied_entry) => occupied_entry.into_mut(),
             hashbrown::hash_map::Entry::Vacant(vacant_entry) => {
                 let mut bucket = Bucket::default();
-                // Create at least 1 pool upfront instead of doing this when
-                // creating the first bind group.
-                bucket.create_pool(device, vacant_entry.key(), POOL_MIN_SETS)?;
+                // A layout that needs no descriptors gets no pool: one would
+                // have to be created with `poolSizeCount == 0`, which is only
+                // legal since Vulkan 1.3.215. Bind groups using such a layout
+                // carry no descriptor set at all, so none is ever allocated.
+                if vacant_entry.key().counts.total() != 0 {
+                    bucket.create_pool(device, vacant_entry.key(), POOL_MIN_SETS)?;
+                }
                 vacant_entry.insert(bucket)
             }
         };
