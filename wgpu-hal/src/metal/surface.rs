@@ -287,8 +287,10 @@ impl crate::Surface for super::Surface {
             wgt::SurfaceColorSpace::Auto => {
                 unreachable!("wgpu-core resolves `Auto` before configuring the surface")
             }
-            // Reset to the layer's default, which treats contents as sRGB.
-            wgt::SurfaceColorSpace::Srgb => None,
+            // An explicit `nil` colorspace means "do not color match", which on a
+            // wide-gamut display shows sRGB values as if they were display-native
+            // and oversaturates everything, so name sRGB explicitly.
+            wgt::SurfaceColorSpace::Srgb => Some(unsafe { objc2_core_graphics::kCGColorSpaceSRGB }),
             wgt::SurfaceColorSpace::ExtendedSrgbLinear => {
                 Some(unsafe { objc2_core_graphics::kCGColorSpaceExtendedLinearSRGB })
             }
