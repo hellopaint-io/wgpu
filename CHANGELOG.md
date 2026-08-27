@@ -202,6 +202,7 @@ By @sagudev in [#10115](https://github.com/gfx-rs/wgpu/pull/10115).
 #### Metal
 
 - Resolve metal color space constants dynamically. By @andyleiserson in [#9819](https://github.com/gfx-rs/wgpu/issues/9819).
+- Set the `CAMetalLayer` colorspace to sRGB for `SurfaceColorSpace::Srgb` instead of `nil`. `nil` means "do not color match", so on a wide-gamut (Display P3) screen sRGB output was shown as display-native and oversaturated. By @lucasmerlin in [#XXXX](https://github.com/gfx-rs/wgpu/pull/XXXX).
 
 #### WebGPU
 
