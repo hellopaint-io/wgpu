@@ -2393,12 +2393,20 @@ impl super::Instance {
         let private_caps = super::PrivateCapabilities {
             image_view_usage: phd_capabilities.device_api_version >= vk::API_VERSION_1_1
                 || phd_capabilities.supports_extension(khr::maintenance2::NAME),
-            timeline_semaphores: match phd_features.timeline_semaphore {
-                Some(features) => features.timeline_semaphore == vk::TRUE,
-                None => phd_features
-                    .timeline_semaphore
-                    .is_some_and(|ext| ext.timeline_semaphore != 0),
-            },
+            // Imagination's proprietary PowerVR driver (Rogue GE83xx, B-Series BXM) advertises
+            // timeline semaphores but crashes in `vkQueueSubmit` on the first submit to a
+            // surface when wgpu uses them: it reads a wait value for the binary acquire semaphore
+            // even though none is required (gfx-rs/wgpu#7669, gfx-rs/wgpu#10677). Fall back to
+            // binary fences there, as for VeriSilicon (gfx-rs/wgpu#10535). Mesa's driver is fine.
+            timeline_semaphores: !(phd_capabilities.properties.vendor_id
+                == crate::auxil::db::imgtec::VENDOR
+                && !phd_capabilities.is_driver(vk::DriverId::IMAGINATION_OPEN_SOURCE_MESA))
+                && match phd_features.timeline_semaphore {
+                    Some(features) => features.timeline_semaphore == vk::TRUE,
+                    None => phd_features
+                        .timeline_semaphore
+                        .is_some_and(|ext| ext.timeline_semaphore != 0),
+                },
             texture_d24: supports_format(
                 &self.shared.raw,
                 phd,
